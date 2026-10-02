@@ -1,4 +1,4 @@
---// esp by night \\
+--// esp by nightzuu \\
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
 local CoreGui = game:GetService("CoreGui")
@@ -96,7 +96,7 @@ function ESP:NewESP(args)
     self.Title = args.Title or args.Name or Target.Name
     self.TextSize = args.TextSize or 14
     self.Color = args.Color or Color3.fromRGB(0, 255, 25)
-    self.Put = args.Put or "esp by night"
+    self.Put = args.Put or "esp by nightzuu"
     self.ShowDistance = args.Distance or false
     self.Rainbow = args.Rainbow or false
     self.Tracer = args.Tracer or false

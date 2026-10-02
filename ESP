@@ -36,10 +36,8 @@ function esp:AddESP(args)
     local TracerEnabled = args.Tracer or false
 
     local gradient = Create("UIGradient", nil, {
-        Color = ColorSequence.new({
-            ColorSequenceKeypoint.new(0, Color),
-            ColorSequenceKeypoint.new(1, Color3.new(1,1,1))
-        })
+        Color = ColorSequence.new(Color, Color3.new(1,1,1)),
+        Rotation = 0
     })
 
     local bill = Create("BillboardGui", CoreGui, {
@@ -102,17 +100,16 @@ function esp:AddESP(args)
             end
 
             if Rainbow then
-                Color = Color3.fromHSV((tick() % 5) / 5,1,1)
+                Color = Color3.fromHSV((tick() % 5) / 5, 1, 1)
             end
 
             text.TextColor3 = Color
             highlight.FillColor = Color
             highlight.OutlineColor = Color
-
-            gradient.Color = ColorSequence.new({
-                ColorSequenceKeypoint.new(0, Color),
-                ColorSequenceKeypoint.new(1, Color3.new(1,1,1))
-            })
+            gradient.Color = ColorSequence.new(
+                Color,
+                Color3.new(1,1,1)
+            )
 
             if tracer then
                 local Camera = workspace.CurrentCamera
@@ -142,4 +139,4 @@ function esp:AddESP(args)
 
     return bill
 end
-return esp
+return end

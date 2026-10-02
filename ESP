@@ -1,142 +1,123 @@
-local LocalPlayer = game:GetService("Players").LocalPlayer
+local Players = game:GetService("Players")
+local LocalPlayer = Players.LocalPlayer
 local CoreGui = game:GetService("CoreGui")
+local RunService = game:GetService("RunService")
 
-local function Create(...)
-    local args = {...}
-    local new = Instance.new(args[1])
-    local props, children = args[2], args[3]
-
-    if typeof(props) == "Instance" then
-        new.Parent = props
-        props, children = args[3], args[4]
+local function Create(class, parent, props, children)
+    local obj = Instance.new(class)
+    
+    if typeof(parent) == "Instance" then
+        obj.Parent = parent
+    elseif typeof(parent) == "table" then
+        props, children = parent, props
     end
 
-    for i,v in pairs(props or {}) do
-        new[i] = v
+    if props then
+        for k, v in pairs(props) do
+            obj[k] = v
+        end
     end
 
-    for _,v in pairs(children or {}) do
-        v.Parent = new
+    if children then
+        for _, child in pairs(children) do
+            child.Parent = obj
+        end
     end
 
-    return new
+    return obj
 end
 
-local esp = {}
+local ESP = {}
 
-function esp:AddESP(args)
+function ESP.new(args)
+    local self = setmetatable({}, ESP)
+
     local Target = args.Target or args.Child
     if not Target then return end
 
-    local Title = args.Title or args.Name or Target.Name
-    local TextSize = args.TextSize or args.FontSize or 14
-    local Color = args.Color or Color3.fromRGB(0,255,25)
-    local Distance = args.Distance or false
-    local Rainbow = args.Rainbow or false
-    local TracerEnabled = args.Tracer or false
+    self.Target = Target
+    self.Title = args.Title or args.Name or Target.Name
+    self.TextSize = args.TextSize or 14
+    self.Color = args.Color or Color3.fromRGB(0, 255, 25)
+    self.ShowDistance = args.Distance or false
+    self.Rainbow = args.Rainbow or false
+    self.Tracer = args.Tracer or false
+    self.MaxDistance = args.MaxDistance or 2000
 
-    local gradient = Create("UIGradient", nil, {
-        Color = ColorSequence.new(Color, Color3.new(1,1,1)),
-        Rotation = 0
-    })
-
-    local bill = Create("BillboardGui", CoreGui, {
-        Name = args.Put or "ESP",
+    self.Billboard = Create("BillboardGui", CoreGui, {
+        Name = "ESP_" .. self.Title,
         AlwaysOnTop = true,
-        Size = UDim2.fromOffset(400,100),
-        Adornee = Target
-    }, {
-        Create("TextLabel", nil, {
-            BackgroundTransparency = 1,
-            Size = UDim2.fromScale(1,1),
-            Text = Title,
-            TextSize = TextSize,
-            TextColor3 = Color,
-            Font = Enum.Font.GothamBold
-        }, {
-            Create("UIStroke", nil, {
-                Thickness = 1,
-                Color = Color3.new(0,0,0)
-            }, {
-                gradient
-            })
-        })
+        Size = UDim2.fromOffset(400, 100),
+        StudsOffset = Vector3.new(0, 2, 0),
+        Adornee = Target,
+        MaxDistance = self.MaxDistance
     })
 
-    local text = bill:FindFirstChildWhichIsA("TextLabel")
+    self.TextLabel = Create("TextLabel", self.Billboard, {
+        BackgroundTransparency = 1,
+        Size = UDim2.fromScale(1, 1),
+        Text = self.Title,
+        TextSize = self.TextSize,
+        TextColor3 = self.Color,
+        FontFace = Font.new("rbxasset://fonts/families/Inconsolata.json", Enum.FontWeight.Bold),
+        TextStrokeTransparency = 0,
+        TextStrokeColor3 = Color3.new(0, 0, 0)
+    })
 
-    local highlight = Create("Highlight", CoreGui, {
+    self.Highlight = Create("Highlight", CoreGui, {
         Adornee = Target,
         DepthMode = Enum.HighlightDepthMode.AlwaysOnTop,
-        FillColor = Color,
-        OutlineColor = Color,
-        FillTransparency = 1,
+        FillColor = self.Color,
+        OutlineColor = self.Color,
+        FillTransparency = 0.85,
         OutlineTransparency = 0
     })
 
-    local tracer
-
-    if TracerEnabled then
-        tracer = Drawing.new("Line")
-        tracer.Thickness = 1
-        tracer.Transparency = 1
-        tracer.Color = Color
+    if self.Tracer and Drawing then
+        self.Line = Drawing.new("Line")
+        self.Line.Thickness = 1
+        self.Line.Transparency = 1
+        self.Line.Color = self.Color
+        self.Line.Visible = false
     end
 
-    task.spawn(function()
-        repeat
-            local root = LocalPlayer.Character
-                and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+    self.Connection = RunService.RenderStepped:Connect(function()
+        if not self.Target or not self.Target.Parent then
+            self:Destroy()
+            return
+        end
 
-            local pos = Target:GetPivot().Position
+        local root = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+        local pos = self.Target:GetPivot().Position
+        local color = self.Color
 
-            gradient.Rotation = (gradient.Rotation + 1) % 360
+        if self.Rainbow then
+            color = Color3.fromHSV((tick() % 5) / 5, 1, 1)
+        end
 
-            if Distance and root then
-                text.Text = Title .. "\n(" ..
-                    math.floor((root.Position - pos).Magnitude) .. "m)"
-            else
-                text.Text = Title
-            end
+        if self.ShowDistance and root then
+            local dist = math.floor((root.Position - pos).Magnitude)
+            self.TextLabel.Text = self.Title .. "\n(" .. dist .. "m)"
+        else
+            self.TextLabel.Text = self.Title
+        end
 
-            if Rainbow then
-                Color = Color3.fromHSV((tick() % 5) / 5, 1, 1)
-            end
+        self.TextLabel.TextColor3 = color
+        self.Highlight.FillColor = color
+        self.Highlight.OutlineColor = color
 
-            text.TextColor3 = Color
-            highlight.FillColor = Color
-            highlight.OutlineColor = Color
-            gradient.Color = ColorSequence.new(
-                Color,
-                Color3.new(1,1,1)
-            )
+        if self.Line then
+            local cam = workspace.CurrentCamera
+            local screenPos, onScreen = cam:WorldToViewportPoint(pos)
 
-            if tracer then
-                local Camera = workspace.CurrentCamera
-                local Screen, Visible =
-                    Camera:WorldToViewportPoint(pos)
-
-                tracer.From = Vector2.new(
-                    Camera.ViewportSize.X / 2,
-                    Camera.ViewportSize.Y
-                )
-
-                tracer.To = Vector2.new(Screen.X, Screen.Y)
-                tracer.Color = Color
-                tracer.Visible = Visible
-            end
-
-            task.wait()
-        until not Target.Parent
-
-        bill:Destroy()
-        highlight:Destroy()
-
-        if tracer then
-            tracer:Remove()
+            self.Line.From = Vector2.new(cam.ViewportSize.X / 2, cam.ViewportSize.Y)
+            self.Line.To = Vector2.new(screenPos.X, screenPos.Y)
+            self.Line.Color = color
+            self.Line.Visible = onScreen
         end
     end)
 
-    return bill
+    return self
 end
-return end
+
+return ESP

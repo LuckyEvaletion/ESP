@@ -29,7 +29,7 @@ end
 
 local ESP = {}
 
-function ESP.new(args)
+function ESP:NewESP(args)
     local self = setmetatable({}, ESP)
 
     local Target = args.Target or args.Child
@@ -39,13 +39,19 @@ function ESP.new(args)
     self.Title = args.Title or args.Name or Target.Name
     self.TextSize = args.TextSize or 14
     self.Color = args.Color or Color3.fromRGB(0, 255, 25)
+    self.Put = args.Put or "esp by night"
     self.ShowDistance = args.Distance or false
     self.Rainbow = args.Rainbow or false
     self.Tracer = args.Tracer or false
     self.MaxDistance = args.MaxDistance or 2000
 
+    self.Gradient = Create("UIGradient", nil, {
+        Color = ColorSequence.new(Color3.new(1,1,1), self.Color, Color3.new(0,0,0)),
+        Rotation = 0
+    })
+
     self.Billboard = Create("BillboardGui", CoreGui, {
-        Name = "ESP_" .. self.Title,
+        Name = self.Put,
         AlwaysOnTop = true,
         Size = UDim2.fromOffset(400, 100),
         StudsOffset = Vector3.new(0, 2, 0),
@@ -60,8 +66,14 @@ function ESP.new(args)
         TextSize = self.TextSize,
         TextColor3 = self.Color,
         FontFace = Font.new("rbxasset://fonts/families/Inconsolata.json", Enum.FontWeight.Bold),
-        TextStrokeTransparency = 0,
-        TextStrokeColor3 = Color3.new(0, 0, 0)
+        TextStrokeTransparency = 1
+    }, {
+        Create("UIStroke", nil, {
+            Thickness = 1,
+            Color = Color3.new(0, 0, 0)
+        }, {
+            self.Gradient
+        })
     })
 
     self.Highlight = Create("Highlight", CoreGui, {
@@ -94,6 +106,9 @@ function ESP.new(args)
         if self.Rainbow then
             color = Color3.fromHSV((tick() % 5) / 5, 1, 1)
         end
+
+        self.Gradient.Rotation = (self.Gradient.Rotation + 1) % 360
+        self.Gradient.Color = ColorSequence.new(color, Color3.new(1, 1, 1))
 
         if self.ShowDistance and root then
             local dist = math.floor((root.Position - pos).Magnitude)

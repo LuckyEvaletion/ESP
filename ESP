@@ -29,12 +29,29 @@ local Tracer = args.Tracer or false
 local Put = args.Put or "esp by wearid"
 
 local bill = Create("BillboardGui", CoreGui, {
-	Name = "redz Library V5",
+	Name = Put,
+    AlwaysOnTop = true,
+    Size = UDim2.new(0,400,0,100),
+    Active = true,
+    Adornee = Target,
+    Parent = Target,
 }, {
-	Create("UIScale", {
-		Scale = UIScale,
-		Name = "Scale"
+	local text = Create("TextLabel", bill, {
+		BackgroundTransparency = 1,
+        BackgroundColor3 = Color3.new(0,0,0),
+        TextColor3 = Color,
+        FontFace = Font.new("rbxasset://fonts/families/Inconsolata.json", Enum.FontWeight.Bold),
+        TextSize = TextSize,
+        TextTransparency = 0,
+        Visible = true,
+        Text = Title,
+        Size = UDim2.new(1,0,1,0),
 	})
+    Create("UIStroke", text, {
+        Thickness = 1,
+        Color = Color3.new(0,0,0),
+        Transparency = 0,
+   })
 })
 
 

@@ -95,8 +95,8 @@ function esp:AddESP(args)
             gradient.Rotation = (gradient.Rotation + 1) % 360
 
             if Distance and root then
-                text.Text = Title .. " [" ..
-                    math.floor((root.Position - pos).Magnitude) .. "m]"
+                text.Text = Title .. "\n(" ..
+                    math.floor((root.Position - pos).Magnitude) .. "m)"
             else
                 text.Text = Title
             end

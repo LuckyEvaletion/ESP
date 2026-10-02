@@ -1,98 +1,145 @@
+local LocalPlayer = game:GetService("Players").LocalPlayer
+local CoreGui = game:GetService("CoreGui")
+
+local function Create(...)
+    local args = {...}
+    local new = Instance.new(args[1])
+    local props, children = args[2], args[3]
+
+    if typeof(props) == "Instance" then
+        new.Parent = props
+        props, children = args[3], args[4]
+    end
+
+    for i,v in pairs(props or {}) do
+        new[i] = v
+    end
+
+    for _,v in pairs(children or {}) do
+        v.Parent = new
+    end
+
+    return new
+end
+
 local esp = {}
 
-Create = function(...)
-		local args = {...}
-		if type(args) ~= "table" then return end
-		local new = Instance.new(args[1])
-		local Children = {}
-		
-		if type(args[2]) == "table" then
-			SetProps(new, args[2])
-			SetChildren(new, args[3])
-			Children = args[3] or {}
-		elseif typeof(args[2]) == "Instance" then
-			new.Parent = args[2]
-			SetProps(new, args[3])
-			SetChildren(new, args[4])
-			Children = args[4] or {}
-		end
-		return new
+function esp:AddESP(args)
+    local Target = args.Target or args.Child
+    if not Target then return end
+
+    local Title = args.Title or args.Name or Target.Name
+    local TextSize = args.TextSize or args.FontSize or 14
+    local Color = args.Color or Color3.fromRGB(0,255,25)
+    local Distance = args.Distance or false
+    local Rainbow = args.Rainbow or false
+    local TracerEnabled = args.Tracer or false
+
+    local gradient = Create("UIGradient", nil, {
+        Color = ColorSequence.new({
+            ColorSequenceKeypoint.new(0, Color),
+            ColorSequenceKeypoint.new(1, Color3.new(1,1,1))
+        })
+    })
+
+    local bill = Create("BillboardGui", CoreGui, {
+        Name = args.Put or "ESP",
+        AlwaysOnTop = true,
+        Size = UDim2.fromOffset(400,100),
+        Adornee = Target
+    }, {
+        Create("TextLabel", nil, {
+            BackgroundTransparency = 1,
+            Size = UDim2.fromScale(1,1),
+            Text = Title,
+            TextSize = TextSize,
+            TextColor3 = Color,
+            Font = Enum.Font.GothamBold
+        }, {
+            Create("UIStroke", nil, {
+                Thickness = 1,
+                Color = Color3.new(0,0,0)
+            }, {
+                gradient
+            })
+        })
+    })
+
+    local text = bill:FindFirstChildWhichIsA("TextLabel")
+
+    local highlight = Create("Highlight", CoreGui, {
+        Adornee = Target,
+        DepthMode = Enum.HighlightDepthMode.AlwaysOnTop,
+        FillColor = Color,
+        OutlineColor = Color,
+        FillTransparency = 1,
+        OutlineTransparency = 0
+    })
+
+    local tracer
+
+    if TracerEnabled then
+        tracer = Drawing.new("Line")
+        tracer.Thickness = 1
+        tracer.Transparency = 1
+        tracer.Color = Color
+    end
+
+    task.spawn(function()
+        repeat
+            local root = LocalPlayer.Character
+                and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+
+            local pos = Target:GetPivot().Position
+
+            gradient.Rotation = (gradient.Rotation + 1) % 360
+
+            if Distance and root then
+                text.Text = Title .. " [" ..
+                    math.floor((root.Position - pos).Magnitude) .. "m]"
+            else
+                text.Text = Title
+            end
+
+            if Rainbow then
+                Color = Color3.fromHSV((tick() % 5) / 5,1,1)
+            end
+
+            text.TextColor3 = Color
+            highlight.FillColor = Color
+            highlight.OutlineColor = Color
+
+            gradient.Color = ColorSequence.new({
+                ColorSequenceKeypoint.new(0, Color),
+                ColorSequenceKeypoint.new(1, Color3.new(1,1,1))
+            })
+
+            if tracer then
+                local Camera = workspace.CurrentCamera
+                local Screen, Visible =
+                    Camera:WorldToViewportPoint(pos)
+
+                tracer.From = Vector2.new(
+                    Camera.ViewportSize.X / 2,
+                    Camera.ViewportSize.Y
+                )
+
+                tracer.To = Vector2.new(Screen.X, Screen.Y)
+                tracer.Color = Color
+                tracer.Visible = Visible
+            end
+
+            task.wait()
+        until not Target.Parent
+
+        bill:Destroy()
+        highlight:Destroy()
+
+        if tracer then
+            tracer:Remove()
+        end
+    end)
+
+    return bill
 end
-local function esp:AddESP(args)
-local Target = args.Target or args.Child
-local Title = args.Title or args.Name or "Title"
-local TextSize = args.TextSize or args.FontSize or 14
-local Color = args.Color or Color3.fromRGB(0,255,25)
-local Distance = args.Distance or false
-local Rainbow = args.Rainbow or false
-local Tracer = args.Tracer or false
-local Put = args.Put or "esp by wearid"
-
-local bill = Create("BillboardGui", CoreGui, {
-	Name = Put,
-    AlwaysOnTop = true,
-    Size = UDim2.new(0,400,0,100),
-    Active = true,
-    Adornee = Target,
-    Parent = Target,
-}, {
-	local text = Create("TextLabel", bill, {
-		BackgroundTransparency = 1,
-        BackgroundColor3 = Color3.new(0,0,0),
-        TextColor3 = Color,
-        FontFace = Font.new("rbxasset://fonts/families/Inconsolata.json", Enum.FontWeight.Bold),
-        TextSize = TextSize,
-        TextTransparency = 0,
-        Visible = true,
-        Text = Title,
-        Size = UDim2.new(1,0,1,0),
-	})
-    Create("UIStroke", text, {
-        Thickness = 1,
-        Color = Color3.new(0,0,0),
-        Transparency = 0,
-   })
-})
-
-
-
-
---[[
-local Billboard = Instance.new("BillboardGui", Child)
-local Text = Instance.new("TextLabel", Billboard)
-local UIStroke = Instance.new("UIStroke", Text)
-local Highlight = Instance.new('Highlight', Child)
-        Billboard.AlwaysOnTop = true
-        Billboard.Size = UDim2.new(0,400,0,100)
-        Billboard.Adornee = Child
-        Billboard.Name = Title
-        Billboard.Active = true
-        Text.BackgroundTransparency = 1
-        Text.BackgroundColor3 = Color3.new(0,0,0)
-        Text.TextColor3 = Color
-        Text.FontFace = Font.new("rbxasset://fonts/families/Inconsolata.json", Enum.FontWeight.Bold)
-        Text.TextSize = Size
-        Text.TextTransparency = 0
-        Text.Visible = true
-        Text.Text = Name
-        Text.Size = UDim2.new(1,0,1,0)
-        UIStroke.Thickness = 1
-        UIStroke.Color = Color3.new(0,0,0)
-        UIStroke.Transparency = 0.75
-        Highlight.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
-        Highlight.FillColor = Color
-        Highlight.OutlineColor = Color
-        Highlight.FillTransparency = 1
-        Highlight.OutlineTransparency =  0
-        Highlight.Name = Title
-task.spawn(function()
-while true do
-if getgenv().DistanceESP then
-Text.Text = string.format("%s\n[%s]", Name or Child.Name, math.floor((game.Players.LocalPlayer.Character.HumanoidRootPart.CFrame.Position - Child:GetPivot().Position).Magnitude))
-else
-Text.Text = Name
-end
-wait()
-end
-end)]]--
-	
+return esp

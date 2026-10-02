@@ -29,6 +29,62 @@ end
 
 local ESP = {}
 
+local active = {}
+local Connection = nil
+
+local function updcontiune()
+    if Connection then return end
+
+    Connection = RunService.Heartbeat:Connect(function()
+        local root = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+        local cam = workspace.CurrentCamera
+
+        for i = #active, 1, -1 do
+            local self = active[i]
+
+            if not self.Target or not self.Target.Parent then
+                self:Destroy()
+                table.remove(active, i)
+                continue
+            end
+
+            local pos = self.Target:GetPivot().Position
+            local color = self.Color
+
+            if self.Rainbow then
+                color = Color3.fromHSV((tick() % 5) / 5, 1, 1)
+            end
+
+            self.Gradient.Rotation = (self.Gradient.Rotation + 1.5) % 360
+            self.Gradient.Color = ColorSequence.new(color, Color3.new(1, 1, 1))
+
+            if self.ShowDistance and root then
+                local dist = math.floor((root.Position - pos).Magnitude)
+                self.TextLabel.Text = self.Title .. "\n(" .. dist .. "m)"
+            else
+                self.TextLabel.Text = self.Title
+            end
+
+            self.TextLabel.TextColor3 = color
+            self.Highlight.FillColor = color
+            self.Highlight.OutlineColor = color
+
+            if self.Line then
+                local screenPos, onScreen = cam:WorldToViewportPoint(pos)
+                self.Line.From = Vector2.new(cam.ViewportSize.X / 2, cam.ViewportSize.Y)
+                self.Line.To = Vector2.new(screenPos.X, screenPos.Y)
+                self.Line.Color = color
+                self.Line.Visible = onScreen
+            end
+        end
+
+        if #active == 0 then
+            Connection:Disconnect()
+            Connection = nil
+        end
+    end)
+end
+
 function ESP:NewESP(args)
     local self = setmetatable({}, ESP)
 
@@ -93,46 +149,25 @@ function ESP:NewESP(args)
         self.Line.Visible = false
     end
 
-    self.Connection = RunService.RenderStepped:Connect(function()
-        if not self.Target or not self.Target.Parent then
-            self:Destroy()
-            return
-        end
-
-        local root = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
-        local pos = self.Target:GetPivot().Position
-        local color = self.Color
-
-        if self.Rainbow then
-            color = Color3.fromHSV((tick() % 5) / 5, 1, 1)
-        end
-
-        self.Gradient.Rotation = (self.Gradient.Rotation + 1) % 360
-        self.Gradient.Color = ColorSequence.new(color, Color3.new(1, 1, 1))
-
-        if self.ShowDistance and root then
-            local dist = math.floor((root.Position - pos).Magnitude)
-            self.TextLabel.Text = self.Title .. "\n(" .. dist .. "m)"
-        else
-            self.TextLabel.Text = self.Title
-        end
-
-        self.TextLabel.TextColor3 = color
-        self.Highlight.FillColor = color
-        self.Highlight.OutlineColor = color
-
-        if self.Line then
-            local cam = workspace.CurrentCamera
-            local screenPos, onScreen = cam:WorldToViewportPoint(pos)
-
-            self.Line.From = Vector2.new(cam.ViewportSize.X / 2, cam.ViewportSize.Y)
-            self.Line.To = Vector2.new(screenPos.X, screenPos.Y)
-            self.Line.Color = color
-            self.Line.Visible = onScreen
-        end
-    end)
+    table.insert(active, self)
+    updcontiune()
 
     return self
+end
+
+function ESP:Destroy()
+    if self.Line then
+        self.Line:Remove()
+        self.Line = nil
+    end
+    if self.Billboard then
+        self.Billboard:Destroy()
+        self.Billboard = nil
+    end
+    if self.Highlight then
+        self.Highlight:Destroy()
+        self.Highlight = nil
+    end
 end
 
 return ESP
